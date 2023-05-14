@@ -4,6 +4,15 @@ import {
   Element,
 } from "https://deno.land/x/deno_dom@v0.1.35-alpha/deno-dom-wasm.ts";
 
+const remapWhitelist: string[][] = [
+  ["[src]", "src"],
+  ["[href]", "href"],
+  ["[srcset]", "srcset"],
+  ["meta[content][property='og:image']", "content"],
+  ["meta[content][property='og:audio']", "content"],
+  ["meta[content][property='og:video']", "content"],
+]
+
 const port = 8080;
 const parser = new DOMParser();
 const base = "http://localhost:8080/";
@@ -76,16 +85,17 @@ const handler = async (request: Request): Promise<Response> => {
       doc.head.append(link);
     }
 
-    // modify all links to use our proxy as a base
-    const links = doc.querySelectorAll("[href], [src]") ?? [];
+    for (const [selector, attribute] of remapWhitelist) {
+      const links = doc.querySelectorAll(selector) ?? [];
 
-    for (const link of links) {
-      if (link instanceof Element) {
-        const el = link as Element;
-        relativizeAttribute(el, "href", path);
-        relativizeAttribute(el, "src", path);
+      for (const link of links) {
+        if (link instanceof Element) {
+          const el = link as Element;
+          relativizeAttribute(el, attribute, path);
+        }
       }
     }
+
 
     // prepend a script tag to load our JS
     const script = doc.createElement("script");
