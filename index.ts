@@ -49,6 +49,8 @@ const handler = async (request: Request): Promise<Response> => {
     return new Response("Invalid URL", { status: 400 });
   }
 
+  const currentBase = base + `${path.protocol}//${path.host}/`;
+
   const response = await fetch(path);
   const headers = new Headers(response.headers);
   headers.delete("content-security-policy");
@@ -63,6 +65,15 @@ const handler = async (request: Request): Promise<Response> => {
     if (!doc) return new Response("Invalid HTML", { status: 400 });
     if (!doc.documentElement) {
       return new Response("Invalid HTML", { status: 400 });
+    }
+
+    // inject a meta tag to load the favicon IF it doesn't already exist
+    const favicon = doc.querySelector("link[rel='icon']");
+    if (!favicon) {
+      const link = doc.createElement("link");
+      link.setAttribute("rel", "icon");
+      link.setAttribute("href", currentBase + "favicon.ico");
+      doc.head.append(link);
     }
 
     // modify all links to use our proxy as a base
