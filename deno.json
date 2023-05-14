@@ -1,6 +1,6 @@
 {
-    "tasks": {
-        "dev": "deno run --allow-net --watch index.ts",
-        "start": "deno run --allow-net index.ts"
-    }
+  "tasks": {
+    "dev": "deno run --allow-net --allow-read=proxy.js --watch index.ts",
+    "start": "deno run --allow-net --allow-read=proxy.js index.ts"
+  }
 }
