@@ -18,7 +18,10 @@ const remapWhitelist: string[][] = [
 
 const port = 8080;
 const parser = new DOMParser();
-const base = "http://localhost:8080/";
+// make it a codespace URL if we're in a codespace
+const base = Deno.env.get("CODESPACES") === "true" ?
+  `https://${Deno.env.get("CODESPACE_NAME")}-8080.preview.app.github.dev/` :
+  `http://localhost:${port}/`;
 
 function safeURL(url: string, base?: string): URL | null {
   try {
@@ -42,19 +45,25 @@ const relativizeAttribute = (el: Element, attribute: string, path: URL) => {
 };
 
 const handler = async (request: Request): Promise<Response> => {
-  if (request.url === base) {
+  const reqURL = new URL(request.url);
+  const baseURL = new URL(base);
+  // modify the URL to use the proxy base
+  reqURL.protocol = baseURL.protocol;
+  reqURL.host = baseURL.host;
+  reqURL.port = baseURL.port;
+  
+  if (reqURL.href === base) {
     return new Response("ProxyPane Home page", { status: 200 });
   }
 
-  if (request.url === base + "proxy.js") {
+  if (reqURL.href === base + "proxy.js") {
     return new Response(
       await Deno.readTextFile("./proxy.js"),
       { headers: { "content-type": "text/javascript" } },
     );
   }
 
-  const url = new URL(request.url);
-  const path = safeURL(url.pathname.slice(1));
+  const path = safeURL(reqURL.pathname.slice(1) + reqURL.search)
 
   if (!path) {
     return new Response("Invalid URL", { status: 400 });
@@ -64,8 +73,12 @@ const handler = async (request: Request): Promise<Response> => {
 
   const response = await fetch(path);
   const headers = new Headers(response.headers);
+  // drop CSP headers
   headers.delete("content-security-policy");
   headers.delete("content-security-policy-report-only");
+  // drop CORS headers
+  headers.delete("access-control-allow-origin");
+  headers.delete("access-control-allow-credentials");
 
   const type = response.headers.get("content-type");
 
@@ -101,7 +114,6 @@ const handler = async (request: Request): Promise<Response> => {
 
     // prepend a script tag to load our JS
     const script = doc.createElement("script");
-    script.setAttribute("type", "module");
     script.setAttribute("src", base + "proxy.js");
     doc.documentElement.prepend(script);
 

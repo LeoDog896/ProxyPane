@@ -1,5 +1,5 @@
-const base = `${window.location.protocol}//${window.location.host}/`;
-const requestURL = new URL(window.location.pathname.slice(1));
+var proxyPaneBase = `${window.location.protocol}//${window.location.host}/`;
+var proxyPaneRequestURL = new URL(window.location.pathname.slice(1));
 
 window.fetch = new Proxy(window.fetch, {
   apply: function (target, that, args) {
@@ -19,11 +19,43 @@ window.XMLHttpRequest = new Proxy(window.XMLHttpRequest, {
       const open = request.open;
 
       request.open = function (method, url, ...args) {
-        console.log("XMLHttpRequest", url);
-        // call the original `open` with all original arguments
-        return open.call(request, method, url, ...args);
+        const base = proxyPaneBase;
+        const reqURL = proxyPaneRequestURL;
+        try {
+          // rebase the URL
+          const requestURL = new URL(url, reqURL.href);
+
+          return open.call(request, method, base + requestURL, ...args);
+
+        } catch (e) {
+          // didn't work, pass through
+          console.warn(e);
+          return open.call(request, method, url, ...args);
+        }
       }
 
       return request;
     },
+});
+
+// override appendChild to intercept script and link tags
+window.HTMLElement.prototype.appendChild = new Proxy(window.HTMLElement.prototype.appendChild, {
+  apply: function (target, that, args) {
+    try {
+      console.log("appendChild", args);
+      const [child] = args;
+      if (child.tagName === "SCRIPT" || child.tagName === "LINK") {
+        const src = child.getAttribute("src");
+        if (src) {
+          const srcURL = new URL(src, proxyPaneRequestURL.href);
+
+          child.setAttribute("src", proxyPaneBase + srcURL);
+        }
+      }
+      return target.apply(that, args);
+    } catch (e) {
+      console.warn(e);
+      return target.apply(that, args);
+    }
+  },
 });
