@@ -8,6 +8,7 @@ const remapWhitelist: string[][] = [
   ["[src]", "src"],
   ["[href]", "href"],
   ["[srcset]", "srcset"],
+  ["form[action]", "action"],
   ["meta[content][property='og:image']", "content"],
   ["meta[content][property='og:audio']", "content"],
   ["meta[content][property='og:video']", "content"],
@@ -71,7 +72,11 @@ const handler = async (request: Request): Promise<Response> => {
 
   const currentBase = base + `${path.protocol}//${path.host}/`;
 
-  const response = await fetch(path);
+  const response = await fetch(path, {
+    headers: {
+      "user-agent": "ProxyPane",
+    }
+  });
   const headers = new Headers(response.headers);
   // drop CSP headers
   headers.delete("content-security-policy");
