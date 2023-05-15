@@ -12,7 +12,18 @@ window.fetch = new Proxy(window.fetch, {
 
 window.XMLHttpRequest = new Proxy(window.XMLHttpRequest, {
     construct: function (target, args) {
-        console.log("XML:", args);
-      return new target(...args);
+      // make a new proxy of the target
+      const request = new target(...args);
+
+      // we want to intercept the URL passed to `open` (TODO)
+      const open = request.open;
+
+      request.open = function (method, url, ...args) {
+        console.log("XMLHttpRequest", url);
+        // call the original `open` with all original arguments
+        return open.call(request, method, url, ...args);
+      }
+
+      return request;
     },
 });
