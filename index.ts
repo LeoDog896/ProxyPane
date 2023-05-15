@@ -11,6 +11,9 @@ const remapWhitelist: string[][] = [
   ["meta[content][property='og:image']", "content"],
   ["meta[content][property='og:audio']", "content"],
   ["meta[content][property='og:video']", "content"],
+  ["meta[name=msapplication-TileImage]", "content"],
+  ["meta[itemprop=image]", "content"],
+  ["meta[name=\"twitter:image\"]", "content"],
 ]
 
 const port = 8080;
@@ -31,7 +34,6 @@ const relativizeAttribute = (el: Element, attribute: string, path: URL) => {
   if (attr) {
     const resolvedURL = safeURL(attr, `${path.protocol}//${path.host}/`);
     const newURL = base + resolvedURL;
-    if (el.tagName === "IMG") console.log(attr, newURL);
 
     if (resolvedURL) {
       el.setAttribute(attribute, newURL);
